@@ -26,7 +26,7 @@ public func cId<C:Component>(ct:C.Type) -> ComponentId {
 public protocol Component {
 }
 
-/// A protocol which should be implemnted by class monitoring entity changes.
+/// A protocol which should be implemented by a class monitoring entity changes.
 public protocol EntityChangedListener : class {
     func componentAdded(entity: Entity, component: Component)
     func componentRemoved(entity: Entity, component: Component)
@@ -35,7 +35,7 @@ public protocol EntityChangedListener : class {
 
 
 // _EntityChangedListener is introduced to be an internal access protocol which Context implements.
-// We avoid EntityChangedListener as it is public and therefor would pollute Context API.
+// We avoid EntityChangedListener as it is public and therefore would pollute Context API.
 protocol _EntityChangedListener : class {
     func componentAdded(entity: Entity, component: Component)
     func componentRemoved(entity: Entity, component: Component)
@@ -45,7 +45,7 @@ protocol _EntityChangedListener : class {
 /// Entity can be seen as a bag of components. 
 /// It is managed by a context and also created by a context instance.
 /// For querying a group of entites please have a look at Group class.
-/// You can observer entity changes by implementing EntityChangedListener protocol.
+/// You can observe entity changes by implementing EntityChangedListener protocol.
 public final class Entity {
     private var _components : [ComponentId:Component]
     private var observers : [EntityChangedListener]
@@ -91,7 +91,7 @@ public final class Entity {
         return nil
     }
 
-    /// Checks if entity already has a somponent of following component type.
+    /// Checks if entity already has a component of following component type.
     public func has<C:Component>(ct:C.Type) -> Bool {
         return hasComponent(cId(ct))
     }
@@ -118,7 +118,7 @@ public final class Entity {
         }
     }
     
-    /// Lets you itterate through all components in the entity.
+    /// Lets you iterate through all components in the entity.
     public var components : SequenceOf<Component> {
         get {
             return SequenceOf(_components.values)
@@ -127,8 +127,8 @@ public final class Entity {
 
     /// Detach creates a DetachedEntity struct which can be changed without informing the managing context about the changes.
     /// This is meant for multithreading, when you need to make heavy computations on a secondary thread and than sync back the changes to the entity on the main thread.
-    /// Important to note that detached entity is not aware of changes that might happen to the entity after it was created. Therefor on sync, detached entity might overwrite the changes which happened to the entity between 'detach' and 'sync' calls.
-    /// As DetachEntity is a struct, every call of this getter will create a new instance. It is up to you to make sure that you don't have concurent detached entities.
+    /// Important to note that detached entity is not aware of changes that might happen to the entity after it was created. Therefore on sync, detached entity might overwrite the changes which happened to the entity between 'detach' and 'sync' calls.
+    /// As DetachEntity is a struct, every call of this getter will create a new instance. It is up to you to make sure that you don't have concurrent detached entities.
     public var detach : DetachedEntity {
         get {
             return DetachedEntity(entity: self, components: _components, changedComponents: [:])
@@ -179,7 +179,7 @@ public func == (lhs: Entity, rhs: Entity) -> Bool {
 }
 
 
-/// Detached entity is meant to be used in multi threading scenario. Please have a look at detach method on Enitty class.
+/// Detached entity is meant to be used in multithreading scenario. Please have a look at detach method on Enitty class.
 public struct DetachedEntity {
     weak private var entity : Entity?
     private var components : [ComponentId:Component]
@@ -222,7 +222,7 @@ public struct DetachedEntity {
     }
     
     /// Sync will go through all changed components and set or remove components from the managed entity instance accordingly to the changes.
-    /// As detached entity was meant to be used in multi threading scenario, the syncing is done asyncronously on a special queue. You can specify the queue and dispatch fucntion as you wish. Defaults are main queue and 'dispatch_async' function.
+    /// As detached entity was meant to be used in multithreading scenario, the syncing is done asynchronously on a special queue. You can specify the queue and dispatch a function as you wish. Defaults are main queue and 'dispatch_async' function.
     public mutating func sync(
                     onQueue queue : dispatch_queue_t = dispatch_get_main_queue(),
                     dispatchFunction : (dispatch_queue_t, dispatch_block_t) -> () = dispatch_async) {
