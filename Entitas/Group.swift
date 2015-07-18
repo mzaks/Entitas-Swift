@@ -16,7 +16,7 @@ public protocol GroupObserver : class {
 /// A group contains all entities which apply to a certain matcher.
 /// Groups are created through Context.entityGroup method.
 /// Groups are always up to date.
-/// Groups are internaly cached in Context class, so you don't have to be concerned about caching them your self, just call Context.entityGroup method when you need it.
+/// Groups are internally cached in Context class, so you don't have to be concerned about caching them your self, just call Context.entityGroup method when you need it.
 public class Group {
     
     /// The matcher witch decides if entity belongs to the group.
@@ -88,7 +88,7 @@ public class Group {
         observers.append(observer)
     }
     
-    /// Remove observer from the group. Call it when you don't whant to be notified any more. Specially if you want to destroy observer object.
+    /// Remove observer from the group. Call it when you don't want to be notified any more. Specially if you want to destroy observer object.
     public func removeObserver(observer : GroupObserver) {
         // TODO: better implemented with Set (iOS 8.3)
         observers = observers.filter({$0 !== observer})
@@ -101,7 +101,7 @@ extension Group : SequenceType {
         return SequenceOf(entities.values).generate()
     }
     
-    /// Convinience method for filtering entities from the group during iteration
+    /// Convenience method for filtering entities from the group during iteration
     public func without(matcher : Matcher) -> SequenceOf<Entity> {
         return SequenceOf(entities.values.filter{
             matcher.isMatching($0)
