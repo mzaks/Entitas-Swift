@@ -7,7 +7,7 @@
 //
 
 /// Context is the central piece of Entitas framework.
-/// It manages the entitties and groups of entities, keeping every thing up to date.
+/// It manages the entities and groups of entities, keeping every thing up to date.
 public class Context : _EntityChangedListener {
     
     private var entities : Set<Entity> = []
@@ -19,10 +19,10 @@ public class Context : _EntityChangedListener {
     /// Simple and empty init method.
     public init(){}
     
-    /// Hard resets of context.
-    /// Deletes all references to entities and groups.
-    /// Sets entity creation index back to 0.
-    /// Currently no observer will be notifyied about the reset.
+        /// Hard resets of context.
+        /// Deletes all references to entities and groups.
+        /// Sets entity creation index back to 0.
+        /// Currently no observer will be notified about the reset.
     public func reset(){
         entities.removeAll(keepCapacity: false)
         entityCreationIndex = 0
@@ -31,9 +31,9 @@ public class Context : _EntityChangedListener {
         groupsLookupByAllId.removeAll(keepCapacity: false)
     }
     
-    /// The only way for creation of an entity.
-    /// This way the entity is managed by the context and gets it creation index.
-    /// The entity will comunicate every change to the managing context.
+        /// The only way for creation of an entity.
+        /// This way the entity is managed by the context and gets it creation index.
+        /// The entity will communicate every change to the managing context.
     public func createEntity() -> Entity {
         let e = Entity(listener: self, creationIndex: entityCreationIndex++)
         entities.insert(e)
@@ -60,14 +60,14 @@ public class Context : _EntityChangedListener {
     
     /// When you destroy an entity, the entity will remove all its components and by that it will also leave all the groups accordingly.
     /// It will inform observers that it was destroyed.
-    /// Be caution about destroying entities. Most of the time flaging an entity with a componentcan do the job and is more appropriate according to data consistency.
+    /// Be caution about destroying entities. Most of the time flagging an entity with a component can do the job and is more appropriate according to data consistency.
     public func destroyEntity(entity : Entity) {
         entity.destroy()
         entities.remove(entity)
     }
     
     /// Destroy all entities for example if you want to have a soft reload.
-    /// Groups are not distroyed, therefor all observers will be notified.
+    /// Groups are not destroyed, therefor all observers will be notified.
     public func destroyAllEntities() {
         for e in entities {
             destroyEntity(e)
