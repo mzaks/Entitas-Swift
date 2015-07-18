@@ -13,7 +13,7 @@ public func == (lhs: Matcher, rhs: Matcher) -> Bool {
 
 var matchers : [String : Matcher] = [:]
 
-/// Matcher is used to identify if an entity has the desiered components.
+/// Matcher is used to identify if an entity has the desired components.
 public struct Matcher : Hashable {
     
     /// List of components to check in the entity.
@@ -42,7 +42,7 @@ public struct Matcher : Hashable {
         return GetMatcher(componentIds, type: MatcherType.All)
     }
     
-    /// Returns a matcher which will check that an entity has atleast one of the listed components.
+    /// Returns a matcher which will check that an entity has at least one of the listed components.
     /// The matchers are cached for performance reasons. Also the order of component types is not important. (A, B, C) and (B, C, A) will result as the same matcher.
     public static func Any<C>(componentTypes : C.Type...) -> Matcher {
         
@@ -72,7 +72,7 @@ public struct Matcher : Hashable {
         self.matcherKey = matcherKey
     }
     
-    /// This method performs the chech.
+    /// This method performs the check.
     public func isMatching(entity : Entity) -> Bool {
         switch type {
         case .All : return isAllMatching(entity)
