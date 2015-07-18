@@ -44,7 +44,7 @@ protocol _EntityChangedListener : class {
 
 /// Entity can be seen as a bag of components. 
 /// It is managed by a context and also created by a context instance.
-/// For querying a group of entites please have a look at Group class.
+/// For querying a group of entities please have a look at Group class.
 /// You can observe entity changes by implementing EntityChangedListener protocol.
 public final class Entity {
     private var _components : [ComponentId:Component]
@@ -61,7 +61,7 @@ public final class Entity {
     }
     
     /// This method adds a component to the entity.
-    /// When the entity already has component of the given type and overwrite parameter was not set to true, "Illegal overwirte error" will be raised.
+    /// When the entity already has component of the given type and overwrite parameter was not set to true, "Illegal overwrite error" will be raised.
     /// This precaution is defined, because it proved to help find bugs during development.
     /// When you overwrite a component, the old component will be first removed from the entity and than the new component will be added. This mechanism ensures that observers get full picture. This is also why component should be immutable.
     public func set(c:Component, overwrite:Bool = false) {
@@ -157,7 +157,7 @@ public final class Entity {
         observers.append(observer)
     }
     
-    /// Removing observer. Call it when you don't whant to be notified any more. Specially if you want to destroy observer object.
+    /// Removing observer. Call it when you don't want to be notified any more. Specially if you want to destroy observer object.
     public func removeObserver(observer : EntityChangedListener) {
         // TODO: better implemented with Set, however think about Hashable
         observers = observers.filter({$0 !== observer})
