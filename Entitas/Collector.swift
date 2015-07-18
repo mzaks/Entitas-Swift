@@ -68,9 +68,9 @@ public class Collector: GroupObserver {
     }
     
     /// Pull lets you get the collected entities in the order how they where collected.
-    /// By providing an amount you can define how many changed entites you would like to get. Think about it as of a queue of changes.
-    /// The amount parameter is introduced in case there are to many changes to process in one go, so you can process those changes sequentialy.
-    /// By settign amount to '-1' you will get all collected entities.
+    /// By providing an amount you can define how many changed entities you would like to get. Think about it as of a queue of changes.
+    /// The amount parameter is introduced in case there are to many changes to process in one go, so you can process those changes sequentially.
+    /// By setting amount to '-1' you will get all collected entities.
     public func pull(amount : Int = -1) -> ArraySlice<Entity> {
         if(amount == 0){
             return []
