@@ -15,18 +15,18 @@ public struct Matcher : Hashable {
     
     public let componentIds : Set<ComponentId>
     public enum MatcherType{
-        case All, Any
+        case all, any
     }
     
     public let type : MatcherType
     
-    public static func All(componentIds : ComponentId...) -> Matcher {
-        return Matcher(componentIds: componentIds, type: .All)
+    public static func all(_ componentIds : ComponentId...) -> Matcher {
+        return Matcher(componentIds: componentIds, type: .all)
     }
     
-    public static func Any(componentIds : ComponentId...) -> Matcher {
+    public static func any(_ componentIds : ComponentId...) -> Matcher {
         
-        return Matcher(componentIds: componentIds, type: .Any)
+        return Matcher(componentIds: componentIds, type: .any)
     }
     
     init(componentIds : [ComponentId], type : MatcherType) {
@@ -34,14 +34,14 @@ public struct Matcher : Hashable {
         self.type = type
     }
     
-    public func isMatching(entity : Entity) -> Bool {
+    public func isMatching(_ entity : Entity) -> Bool {
         switch type {
-        case .All : return isAllMatching(entity)
-        case .Any : return isAnyMatching(entity)
+        case .all : return isAllMatching(entity)
+        case .any : return isAnyMatching(entity)
         }
     }
     
-    func isAllMatching(entity : Entity) -> Bool {
+    func isAllMatching(_ entity : Entity) -> Bool {
         for cid in componentIds {
             if(!entity.hasComponent(cid)){
                 return false
@@ -50,7 +50,7 @@ public struct Matcher : Hashable {
         return true
     }
     
-    func isAnyMatching(entity : Entity) -> Bool {
+    func isAnyMatching(_ entity : Entity) -> Bool {
         for cid in componentIds {
             if(entity.hasComponent(cid)){
                 return true
@@ -67,17 +67,17 @@ public struct Matcher : Hashable {
     
 }
 
-func allOf(componentIds : ComponentId...) -> AllOfMatcher {
+func allOf(_ componentIds : ComponentId...) -> AllOfMatcher {
     return AllOfMatcher(allOf: Set(componentIds))
 }
 
-func anyOf(componentIds : ComponentId...) -> AnyOfMatcher {
+func anyOf(_ componentIds : ComponentId...) -> AnyOfMatcher {
     return AnyOfMatcher(allOf: [], anyOf: Set(componentIds))
 }
 
 
 public protocol _Matcher : Hashable {
-    func isMatching(entity : Entity) -> Bool
+    func isMatching(_ entity : Entity) -> Bool
 }
 
 public func == (lhs: AllOfMatcher, rhs: AllOfMatcher) -> Bool {
@@ -86,21 +86,21 @@ public func == (lhs: AllOfMatcher, rhs: AllOfMatcher) -> Bool {
 
 public struct AllOfMatcher : _Matcher {
     
-    private let allOf : Set<ComponentId>
+    fileprivate let allOf : Set<ComponentId>
     
-    private init(allOf : Set<ComponentId>){
+    fileprivate init(allOf : Set<ComponentId>){
         self.allOf = allOf
     }
     
-    public func anyOf(componentIds : ComponentId...) -> AnyOfMatcher {
+    public func anyOf(_ componentIds : ComponentId...) -> AnyOfMatcher {
         return AnyOfMatcher(allOf: self.allOf, anyOf: Set(componentIds))
     }
     
-    public func noneOf(componentIds : ComponentId...) -> NoneOfMatcher {
+    public func noneOf(_ componentIds : ComponentId...) -> NoneOfMatcher {
         return NoneOfMatcher(allOf: self.allOf, anyOf: [], noneOf: Set(componentIds))
     }
     
-    public func isMatching(entity: Entity) -> Bool {
+    public func isMatching(_ entity: Entity) -> Bool {
         return isAllMatching(entity, componentIds: allOf)
     }
     
@@ -115,19 +115,19 @@ public func == (lhs: AnyOfMatcher, rhs: AnyOfMatcher) -> Bool {
 
 public struct AnyOfMatcher : _Matcher {
     
-    private let allOf : Set<ComponentId>
-    private let anyOf : Set<ComponentId>
+    fileprivate let allOf : Set<ComponentId>
+    fileprivate let anyOf : Set<ComponentId>
     
-    private init(allOf : Set<ComponentId>, anyOf : Set<ComponentId>){
+    fileprivate init(allOf : Set<ComponentId>, anyOf : Set<ComponentId>){
         self.allOf = allOf
         self.anyOf = anyOf
     }
     
-    public func noneOf(componentIds : ComponentId...) -> NoneOfMatcher {
+    public func noneOf(_ componentIds : ComponentId...) -> NoneOfMatcher {
         return NoneOfMatcher(allOf: self.allOf, anyOf: self.anyOf, noneOf: Set(componentIds))
     }
     
-    public func isMatching(entity: Entity) -> Bool {
+    public func isMatching(_ entity: Entity) -> Bool {
         return isAllMatching(entity, componentIds: allOf) && isAnyMatching(entity, componentIds: anyOf)
     }
     
@@ -141,17 +141,17 @@ public func == (lhs: NoneOfMatcher, rhs: NoneOfMatcher) -> Bool {
 }
 
 public struct NoneOfMatcher : _Matcher {
-    private let allOf : Set<ComponentId>
-    private let anyOf : Set<ComponentId>
-    private let noneOf : Set<ComponentId>
+    fileprivate let allOf : Set<ComponentId>
+    fileprivate let anyOf : Set<ComponentId>
+    fileprivate let noneOf : Set<ComponentId>
     
-    private init(allOf : Set<ComponentId>, anyOf : Set<ComponentId>, noneOf : Set<ComponentId>){
+    fileprivate init(allOf : Set<ComponentId>, anyOf : Set<ComponentId>, noneOf : Set<ComponentId>){
         self.allOf = allOf
         self.anyOf = anyOf
         self.noneOf = noneOf
     }
     
-    public func isMatching(entity: Entity) -> Bool {
+    public func isMatching(_ entity: Entity) -> Bool {
         return isAllMatching(entity, componentIds: allOf) && isAnyMatching(entity, componentIds: anyOf) && isNoneMatching(entity, componentIds: noneOf)
     }
     
@@ -160,7 +160,7 @@ public struct NoneOfMatcher : _Matcher {
     }
 }
 
-private func isAllMatching(entity : Entity, componentIds : Set<ComponentId>) -> Bool {
+private func isAllMatching(_ entity : Entity, componentIds : Set<ComponentId>) -> Bool {
     if componentIds.isEmpty {
         return true
     }
@@ -172,7 +172,7 @@ private func isAllMatching(entity : Entity, componentIds : Set<ComponentId>) -> 
     return true
 }
 
-private func isAnyMatching(entity : Entity, componentIds : Set<ComponentId>) -> Bool {
+private func isAnyMatching(_ entity : Entity, componentIds : Set<ComponentId>) -> Bool {
     if componentIds.isEmpty {
         return true
     }
@@ -185,7 +185,7 @@ private func isAnyMatching(entity : Entity, componentIds : Set<ComponentId>) -> 
     return false
 }
 
-private func isNoneMatching(entity : Entity, componentIds : Set<ComponentId>) -> Bool {
+private func isNoneMatching(_ entity : Entity, componentIds : Set<ComponentId>) -> Bool {
     for cid in componentIds {
         if(entity.hasComponent(cid)){
             return false

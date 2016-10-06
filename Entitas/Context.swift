@@ -10,13 +10,13 @@ typealias System = ()->()
 
 /// Context is the central piece of Entitas framework.
 /// It manages the entities and groups of entities, keeping every thing up to date.
-public class Context : EntityChangedListener, CustomDebugStringConvertible {
+open class Context : EntityChangedListener, CustomDebugStringConvertible {
     
-    private var _entities : [Int:Entity] = [:]
-    private var _entityCreationIndex = 0
-    private var _groupLookupByMatcher : [Matcher:Group] = [:]
-    private var _groupsLookupByAnyId : [ComponentId:[Group]] = [:]
-    private var _groupsLookupByAllId : [ComponentId:[Group]] = [:]
+    fileprivate var _entities : [Int:Entity] = [:]
+    fileprivate var _entityCreationIndex = 0
+    fileprivate var _groupLookupByMatcher : [Matcher:Group] = [:]
+    fileprivate var _groupsLookupByAnyId : [ComponentId:[Group]] = [:]
+    fileprivate var _groupsLookupByAllId : [ComponentId:[Group]] = [:]
     
     /// Simple and empty init method.
     public init(){}
@@ -25,18 +25,18 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
     /// Deletes all references to entities and groups.
     /// Sets entity creation index back to 0.
     /// Currently no observer will be notified about the reset.
-    public func reset(){
-        _entities.removeAll(keepCapacity: false)
+    open func reset(){
+        _entities.removeAll(keepingCapacity: false)
         _entityCreationIndex = 0
-        _groupLookupByMatcher.removeAll(keepCapacity: false)
-        _groupsLookupByAnyId.removeAll(keepCapacity: false)
-        _groupsLookupByAllId.removeAll(keepCapacity: false)
+        _groupLookupByMatcher.removeAll(keepingCapacity: false)
+        _groupsLookupByAnyId.removeAll(keepingCapacity: false)
+        _groupsLookupByAllId.removeAll(keepingCapacity: false)
     }
     
     /// The only way for creation of an entity.
     /// This way the entity is managed by the context and gets it creation index.
     /// The entity will communicate every change to the managing context.
-    public func createEntity() -> Entity {
+    open func createEntity() -> Entity {
         let e = Entity(listener: self, creationIndex: _entityCreationIndex)
         _entities[e.creationIndex] = e
         _entityCreationIndex += 1
@@ -44,7 +44,7 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
     }
     
     /// The only way to get a group. The groups are cached so if you will call this method with the same matcher multiple times you will get the same instance of the group.
-    public func entityGroup(matcher : Matcher) -> Group {
+    open func entityGroup(_ matcher : Matcher) -> Group {
         if let group = _groupLookupByMatcher[matcher] {
             return group
         }
@@ -54,8 +54,8 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
         fillGroupWithEntities(group)
         
         switch group.matcher.type{
-        case .Any : addGroupToLoockupByAnyId(group)
-        case .All : addGroupToLoockupByAllId(group)
+        case .any : addGroupToLoockupByAnyId(group)
+        case .all : addGroupToLoockupByAllId(group)
         }
         
         return group
@@ -64,18 +64,18 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
     /// When you destroy an entity, the entity will remove all its components and by that it will also leave all the groups accordingly.
     /// It will inform observers that it was destroyed.
     /// Be caution about destroying entities. Most of the time flagging an entity with a component can do the job and is more appropriate according to data consistency.
-    public func destroyEntity(entity : Entity) {
-        _entities.removeValueForKey(entity.creationIndex)
+    open func destroyEntity(_ entity : Entity) {
+        _entities.removeValue(forKey: entity.creationIndex)
         entity.removeAllComponents()
     }
     
     /// Register system if you want it to appear in debug context
-    func registerSystem(name :String, system : System) -> System {
+    func registerSystem(_ name :String, system : @escaping System) -> System {
         return system
     }
     
     
-    func fillGroupWithEntities(group : Group){
+    func fillGroupWithEntities(_ group : Group){
         for e in _entities.values {
             if group.matcher.isMatching(e){
                 group.addEntity(e)
@@ -83,7 +83,7 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
         }
     }
     
-    func addGroupToLoockupByAnyId(group : Group) {
+    func addGroupToLoockupByAnyId(_ group : Group) {
         for cid in group.matcher.componentIds {
             var groups : [Group] = []
             if let _groups = _groupsLookupByAnyId[cid]{
@@ -95,7 +95,7 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
         }
     }
     
-    func addGroupToLoockupByAllId(group : Group) {
+    func addGroupToLoockupByAllId(_ group : Group) {
         for cid in group.matcher.componentIds {
             var groups : [Group] = []
             if let _groups = _groupsLookupByAllId[cid]{
@@ -107,7 +107,7 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
         }
     }
         
-    func componentAdded(entity: Entity, component: Component) {
+    func componentAdded(_ entity: Entity, component: Component) {
         
         let componentId = component.cId
         
@@ -125,7 +125,7 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
         }
     }
     
-    func componentRemoved(entity: Entity, component: Component) {
+    func componentRemoved(_ entity: Entity, component: Component) {
         
         let componentId = component.cId
         
@@ -149,9 +149,9 @@ public class Context : EntityChangedListener, CustomDebugStringConvertible {
         return _groupLookupByMatcher.count
     }
     
-    public var debugDescription: String {
+    open var debugDescription: String {
         let entities = _entities.values.flatMap({$0.debugDescription})
         
-        return entities.joinWithSeparator("\n")
+        return entities.joined(separator: "\n")
     }
 }

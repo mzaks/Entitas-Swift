@@ -9,23 +9,23 @@
 import Foundation
 
 /// Debug context is a subclass of context which will protocol every change happening to entities or groups.
-public class DebugContext : Context {
+open class DebugContext : Context {
     
     let creationTime : CFAbsoluteTime
     var entityCreationTimeDeltas : [Int:CFAbsoluteTime] = [:]
-    public var printFunction : (String) -> ()
+    open var printFunction : (String) -> ()
     let ignore : Set<ComponentId>
     
-    private var stateChange = false
+    fileprivate var stateChange = false
     
-    public init(printFunction : (String) -> (), ignore: Set<ComponentId> = []){
+    public init(printFunction : @escaping (String) -> (), ignore: Set<ComponentId> = []){
         creationTime = CFAbsoluteTimeGetCurrent()
         self.printFunction = printFunction
         self.ignore = ignore
         super.init()
     }
     
-    public override func createEntity() -> Entity {
+    open override func createEntity() -> Entity {
         let e = super.createEntity()
         entityCreationTimeDeltas[e.creationIndex] = deltaTime
         printFunction("Entity: \(e.creationIndex) created. (\(entityCreationTimeDeltas[e.creationIndex]!))")
@@ -33,20 +33,14 @@ public class DebugContext : Context {
         return e
     }
     
-    public override func destroyEntity(entity : Entity) {
+    open override func destroyEntity(_ entity : Entity) {
         super.destroyEntity(entity)
         printFunction("Entity: \(entity.creationIndex) destroyed. Age: (\(entityAge(entity)) (\(deltaTime))")
         stateChange = true
     }
     
-//    public override func entityGroup(matcher : Matcher) -> Group {
-//        let group = super.entityGroup(matcher)
-//        printFunction("Group: \(matcher.matcherKey) requested. (\(numberOfGroups)) (\(deltaTime))")
-//        return group
-//    }
-    
-    override func registerSystem(name :String, system : System) -> System {
-        return { [self]
+    override func registerSystem(_ name :String, system : @escaping System) -> System {
+        return { 
             if self.stateChange {
                 self.printFunction("-------- Changes were applied outside system loop")
                 self.stateChange = false
@@ -60,7 +54,7 @@ public class DebugContext : Context {
         }
     }
     
-    override func componentAdded(entity: Entity, component: Component) {
+    override func componentAdded(_ entity: Entity, component: Component) {
         super.componentAdded(entity, component: component)
         
         guard !ignore.contains(component.cId) else {
@@ -75,7 +69,7 @@ public class DebugContext : Context {
         stateChange = true
     }
     
-    override func componentRemoved(entity: Entity, component: Component) {
+    override func componentRemoved(_ entity: Entity, component: Component) {
         super.componentRemoved(entity, component: component)
         
         guard !ignore.contains(component.cId) else {
@@ -95,7 +89,7 @@ public class DebugContext : Context {
         return CFAbsoluteTimeGetCurrent() - creationTime
     }
     
-    func entityAge(e: Entity )->CFAbsoluteTime{
+    func entityAge(_ e: Entity )->CFAbsoluteTime{
         return CFAbsoluteTimeGetCurrent() - entityCreationTimeDeltas[e.creationIndex]!
     }
     

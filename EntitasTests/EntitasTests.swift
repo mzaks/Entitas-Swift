@@ -49,14 +49,14 @@ class ContextTests: XCTestCase {
         addPosition(e, point: (x:20, y:40))
         
         // then
-        XCTAssert(e.get(FlagComponent) != nil, "Entity should have flag component")
-        let name : String! = e.get(NameComponent)?.name
+        XCTAssert(e.get(FlagComponent.self) != nil, "Entity should have flag component")
+        let name : String! = e.get(NameComponent.self)?.name
         XCTAssertEqual(name, "Maxim")
-        let age : Int! = e.get(AgeComponent)?.age
+        let age : Int! = e.get(AgeComponent.self)?.age
         XCTAssertEqual(age, 33)
-        let resources : [String:Int]! = e.get(ResourcesComponent)?.resources
+        let resources : [String:Int]! = e.get(ResourcesComponent.self)?.resources
         XCTAssertEqual(resources, ["gold":20, "wood" : 45])
-        let position = e.get(PositionComponent)!
+        let position = e.get(PositionComponent.self)!
         XCTAssertEqual(position.x, 20)
         XCTAssertEqual(position.y, 40)
     }
@@ -81,8 +81,8 @@ class ContextTests: XCTestCase {
         let (g1, g2, g3, g4) = createFourGroups()
         
         // when
-        e3.remove(AgeComponent)
-        e2.remove(FlagComponent)
+        e3.remove(AgeComponent.self)
+        e2.remove(FlagComponent.self)
         
         // then
         XCTAssertEqual(g1.sortedEntities, [e1], "entities with name and age")
@@ -109,11 +109,11 @@ class ContextTests: XCTestCase {
         // given
         let (_, _, _) = createThreeEntities()
         
-        let group = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
+        let group = context.entityGroup(Matcher.all(NameComponent.cId, AgeComponent.cId))
         
         // when
         for e in group {
-            e.remove(NameComponent)
+            e.remove(NameComponent.self)
         }
         
         // then
@@ -124,7 +124,7 @@ class ContextTests: XCTestCase {
         // given
         let (e1, e2, e3) = createThreeEntities()
         
-        let group = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
+        let group = context.entityGroup(Matcher.all(NameComponent.cId, AgeComponent.cId))
         
         // when
         context.destroyEntity(e1)
@@ -139,7 +139,7 @@ class ContextTests: XCTestCase {
         // given
         let (e1, e2, e3) = createThreeEntities()
         
-        let group = context.entityGroup(Matcher.Any(NameComponent.cId, AgeComponent.cId))
+        let group = context.entityGroup(Matcher.any(NameComponent.cId, AgeComponent.cId))
         
         // when
         context.destroyEntity(e1)
@@ -169,35 +169,35 @@ class ContextTests: XCTestCase {
     }
     
     func createFourGroups() -> (g1:Group, g2:Group, g3:Group, g4:Group){
-        let group1 = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
-        let group2 = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId, PositionComponent.cId))
+        let group1 = context.entityGroup(Matcher.all(NameComponent.cId, AgeComponent.cId))
+        let group2 = context.entityGroup(Matcher.all(NameComponent.cId, AgeComponent.cId, PositionComponent.cId))
         let group3 = context.entityGroup(AgeComponent.matcher)
-        let group4 = context.entityGroup(Matcher.Any(PositionComponent.cId, FlagComponent.cId))
+        let group4 = context.entityGroup(Matcher.any(PositionComponent.cId, FlagComponent.cId))
         
         return (group1, group2, group3, group4)
     }
     
     func test_shoud_get_same_group() {
         // given
-        let group1 = context.entityGroup(Matcher.All(PositionComponent.cId, NameComponent.cId))
+        let group1 = context.entityGroup(Matcher.all(PositionComponent.cId, NameComponent.cId))
         // when
-        let group2 = context.entityGroup(Matcher.All(NameComponent.cId, PositionComponent.cId))
+        let group2 = context.entityGroup(Matcher.all(NameComponent.cId, PositionComponent.cId))
         // then
         XCTAssertTrue(group1 === group2, "you get the same group")
     }
     
     func test_shoud_get_same_matcher() {
         // given
-        let matcher1 = Matcher.All(PositionComponent.cId, NameComponent.cId)
+        let matcher1 = Matcher.all(PositionComponent.cId, NameComponent.cId)
         // when
-        let matcher2 = Matcher.All(NameComponent.cId, PositionComponent.cId)
+        let matcher2 = Matcher.all(NameComponent.cId, PositionComponent.cId)
         // then
         XCTAssertTrue(matcher1 == matcher2, "you get the same matcher")
     }
     
     func test_should_create_matcher_with_sorted_component_ids() {
         // when
-        let matcher : Matcher = Matcher.All(AgeComponent.cId, NameComponent.cId, FlagComponent.cId)
+        let matcher : Matcher = Matcher.all(AgeComponent.cId, NameComponent.cId, FlagComponent.cId)
         
         // then
         
@@ -216,11 +216,11 @@ class ContextTests: XCTestCase {
         let detached = e.detach
         
         // then
-        XCTAssertEqual(detached.get(PositionComponent)!.x, e.get(PositionComponent)!.x)
-        XCTAssertEqual(detached.get(PositionComponent)!.y, e.get(PositionComponent)!.y)
-        XCTAssertEqual(detached.get(NameComponent)!.name, e.get(NameComponent)!.name)
-        XCTAssertEqual(detached.get(AgeComponent)!.age, e.get(AgeComponent)!.age)
-        XCTAssertEqual(detached.has(FlagComponent), e.has(FlagComponent))
+        XCTAssertEqual(detached.get(PositionComponent.self)!.x, e.get(PositionComponent.self)!.x)
+        XCTAssertEqual(detached.get(PositionComponent.self)!.y, e.get(PositionComponent.self)!.y)
+        XCTAssertEqual(detached.get(NameComponent.self)!.name, e.get(NameComponent.self)!.name)
+        XCTAssertEqual(detached.get(AgeComponent.self)!.age, e.get(AgeComponent.self)!.age)
+        XCTAssertEqual(detached.has(FlagComponent.self), e.has(FlagComponent.self))
     }
     
     func test_changing_detached_does_not_affect_entity(){
@@ -233,11 +233,11 @@ class ContextTests: XCTestCase {
         
         // when
         var detached = e.detach
-        detached.remove(NameComponent)
+        detached.remove(NameComponent.self)
         
         // then
-        XCTAssert(e.has(NameComponent), "entity still has componet")
-        XCTAssert(!detached.has(NameComponent), "detached does not have componet")
+        XCTAssert(e.has(NameComponent.self), "entity still has componet")
+        XCTAssert(!detached.has(NameComponent.self), "detached does not have componet")
     }
     
     class MyObserver : GroupObserver {
@@ -250,12 +250,12 @@ class ContextTests: XCTestCase {
             self.expectation = expectation
         }
         
-        func entityAdded(entity : Entity) {
+        func entityAdded(_ entity : Entity) {
             entityAdded = entity
             expectation?.fulfill()
         }
         
-        func entityRemoved(entity : Entity, withRemovedComponent removedComponent : Component) {
+        func entityRemoved(_ entity : Entity, withRemovedComponent removedComponent : Component) {
             entityRemoved = entity
             expectation?.fulfill()
         }
@@ -265,9 +265,9 @@ class ContextTests: XCTestCase {
         // given
         let e = context.createEntity()
         e.set(FlagComponent())
-        let expectation = expectationWithDescription("expect sync");
+        let expectation = self.expectation(description: "expect sync");
         
-        let group = context.entityGroup(Matcher.All(NameComponent.cId, PositionComponent.cId, AgeComponent.cId))
+        let group = context.entityGroup(Matcher.all(NameComponent.cId, PositionComponent.cId, AgeComponent.cId))
         group.addObserver(MyObserver(expectation: expectation))
         
         // when
@@ -275,31 +275,31 @@ class ContextTests: XCTestCase {
         detached.set(NameComponent(name:"Max"))
         detached.set(PositionComponent(x:45, y:89))
         detached.set(AgeComponent(age:49))
-        detached.remove(FlagComponent)
+        detached.remove(FlagComponent.self)
         
         detached.sync()
         
         // then
-        XCTAssert(e.has(FlagComponent), "should still have component")
-        XCTAssert(!e.has(NameComponent), "should not have component yet")
-        XCTAssert(!e.has(PositionComponent), "should not have component yet")
-        XCTAssert(!e.has(AgeComponent), "should not have component yet")
+        XCTAssert(e.has(FlagComponent.self), "should still have component")
+        XCTAssert(!e.has(NameComponent.self), "should not have component yet")
+        XCTAssert(!e.has(PositionComponent.self), "should not have component yet")
+        XCTAssert(!e.has(AgeComponent.self), "should not have component yet")
         
-        waitForExpectationsWithTimeout(1) { (error) in
-            XCTAssert(!e.has(FlagComponent), "removed component")
-            XCTAssertEqual(e.get(NameComponent)!.name, "Max", "synced component")
-            XCTAssertEqual(e.get(PositionComponent)!.x, 45, "synced component")
-            XCTAssertEqual(e.get(PositionComponent)!.y, 89, "synced component")
-            XCTAssertEqual(e.get(AgeComponent)!.age, 49, "synced component")
+        waitForExpectations(timeout: 1) { (error) in
+            XCTAssert(!e.has(FlagComponent.self), "removed component")
+            XCTAssertEqual(e.get(NameComponent.self)!.name, "Max", "synced component")
+            XCTAssertEqual(e.get(PositionComponent.self)!.x, 45, "synced component")
+            XCTAssertEqual(e.get(PositionComponent.self)!.y, 89, "synced component")
+            XCTAssertEqual(e.get(AgeComponent.self)!.age, 49, "synced component")
         }
     }
     
     func test_collector_pulling(){
         // given
         
-        let group = context.entityGroup(Matcher.All(NameComponent.cId))
+        let group = context.entityGroup(Matcher.all(NameComponent.cId))
         
-        let collector = Collector(group: group, changeType: .Added)
+        let collector = Collector(group: group, changeType: .added)
         
         for _ in 1...10 {
             let e = context.createEntity()
@@ -316,9 +316,9 @@ class ContextTests: XCTestCase {
     func test_collector_pulling_four_first(){
         // given
         
-        let group = context.entityGroup(Matcher.All(NameComponent.cId))
+        let group = context.entityGroup(Matcher.all(NameComponent.cId))
         
-        let collector = Collector(group: group, changeType: .Added)
+        let collector = Collector(group: group, changeType: .added)
         
         for index in 1...10 {
             let e = context.createEntity()
@@ -330,10 +330,10 @@ class ContextTests: XCTestCase {
         
         // then
         XCTAssert(result.count == 4, "4 entities were pulled from collector")
-        XCTAssert(result[0].get(NameComponent)!.name == "Maxim1", "correct name")
-        XCTAssert(result[1].get(NameComponent)!.name == "Maxim2", "correct name")
-        XCTAssert(result[2].get(NameComponent)!.name == "Maxim3", "correct name")
-        XCTAssert(result[3].get(NameComponent)!.name == "Maxim4", "correct name")
+        XCTAssert(result[0].get(NameComponent.self)!.name == "Maxim1", "correct name")
+        XCTAssert(result[1].get(NameComponent.self)!.name == "Maxim2", "correct name")
+        XCTAssert(result[2].get(NameComponent.self)!.name == "Maxim3", "correct name")
+        XCTAssert(result[3].get(NameComponent.self)!.name == "Maxim4", "correct name")
         
         // when
         let result2 = collector.pull()
@@ -342,7 +342,7 @@ class ContextTests: XCTestCase {
     
     func test_group_observer_trigering_when_removed_entity() {
         // given
-        let group = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
+        let group = context.entityGroup(Matcher.all(NameComponent.cId, AgeComponent.cId))
         
         let e = context.createEntity()
         e.set(NameComponent(name:"Maxim"))
@@ -351,7 +351,7 @@ class ContextTests: XCTestCase {
         group.addObserver(observer)
         
         // when
-        e.remove(NameComponent)
+        e.remove(NameComponent.self)
         
         // then
         XCTAssertNotNil(observer.entityRemoved, "should remove entity")
@@ -359,14 +359,14 @@ class ContextTests: XCTestCase {
     
     func test_group_observer_not_trigering_when_removed_entity_is_not_part_of_the_group() {
         // given
-        let group = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
+        let group = context.entityGroup(Matcher.all(NameComponent.cId, AgeComponent.cId))
         let e = context.createEntity()
         e.set(NameComponent(name:"Maxim"))
         let observer = MyObserver(expectation: nil)
         group.addObserver(observer)
         
         // when
-        e.remove(NameComponent)
+        e.remove(NameComponent.self)
         
         // then
         XCTAssertNil(observer.entityRemoved, "should not remove entity")
@@ -376,7 +376,7 @@ class ContextTests: XCTestCase {
         
         let groups = createFourGroups()
         
-        self.measureBlock() {
+        self.measure() {
             for _ in 1 ... 1_000 {
                 let e = self.context.createEntity()
                 self.addRandomComponents(e)
@@ -394,27 +394,27 @@ class ContextTests: XCTestCase {
         XCTAssertTrue(count4 > 0, "group should have entitites")
     }
     
-    func addFlag(e : Entity){
+    func addFlag(_ e : Entity){
         e.set(FlagComponent())
     }
     
-    func addName(e : Entity, name: String = "Max"){
+    func addName(_ e : Entity, name: String = "Max"){
         e.set(NameComponent(name:name))
     }
     
-    func addAge(e : Entity, age: Int = 33){
+    func addAge(_ e : Entity, age: Int = 33){
         e.set(AgeComponent(age:age))
     }
     
-    func addResources(e : Entity, resources : [String:Int] = ["stone":3451]){
+    func addResources(_ e : Entity, resources : [String:Int] = ["stone":3451]){
         e.set(ResourcesComponent(resources: resources))
     }
     
-    func addPosition(e : Entity, point: (x:Int, y:Int) = (x:13, y:15)){
+    func addPosition(_ e : Entity, point: (x:Int, y:Int) = (x:13, y:15)){
         e.set(PositionComponent(x: point.x, y: point.y))
     }
     
-    func addRandomComponents(e : Entity) {
+    func addRandomComponents(_ e : Entity) {
         if arc4random_uniform(2) == 1 {
             addFlag(e)
         }

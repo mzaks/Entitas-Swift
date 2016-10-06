@@ -8,7 +8,7 @@
 
 /// Collector is a group observer which gathers all entities which were added or removed (according to GroupChangeType you provide) to the observed group.
 /// It helps you to collect changes over time and react on all changes at your convenience.
-public class Collector: GroupObserver {
+open class Collector: GroupObserver {
     
     /// Defines on which change an entity should be collected.
     /// 'Added' means that we collect an entity if it was added to the group. Even if it was removed from the group later, the entity stays inside of collector.
@@ -17,11 +17,11 @@ public class Collector: GroupObserver {
     /// 'AddedOnly' means that we collect an entity if it was added to the group. If we remove it again we remove it from collector.
     /// 'RemovedOnly' means that we collect an entity if it was removed from the group. If we add it again we remove it from collector.
     public enum GroupChangeType {
-        case Added
-        case Removed
-        case AddedAndRemoved
-        case AddedOnly
-        case RemovedOnly
+        case added
+        case removed
+        case addedAndRemoved
+        case addedOnly
+        case removedOnly
     }
     
     let changeType : GroupChangeType
@@ -35,15 +35,15 @@ public class Collector: GroupObserver {
     }
     
     /// Implementation of GroupObserver protocol.
-    public func entityAdded(entity : Entity) {
-        if(entityIdToPosition[entity.creationIndex] != nil && changeType != .RemovedOnly){
+    open func entityAdded(_ entity : Entity) {
+        if(entityIdToPosition[entity.creationIndex] != nil && changeType != .removedOnly){
             return
         }
         switch changeType {
-        case .Removed : return
-        case .RemovedOnly :
-            collectedEntities.removeAtIndex(entityIdToPosition[entity.creationIndex]!)
-            entityIdToPosition.removeValueForKey(entity.creationIndex)
+        case .removed : return
+        case .removedOnly :
+            collectedEntities.remove(at: entityIdToPosition[entity.creationIndex]!)
+            entityIdToPosition.removeValue(forKey: entity.creationIndex)
         default :
             collectedEntities.append(entity)
             entityIdToPosition[entity.creationIndex] = collectedEntities.count - 1
@@ -51,15 +51,15 @@ public class Collector: GroupObserver {
     }
     
     /// Implementation of GroupObserver protocol.
-    public func entityRemoved(entity : Entity, withRemovedComponent removedComponent : Component) {
-        if(entityIdToPosition[entity.creationIndex] != nil && changeType != .AddedOnly){
+    open func entityRemoved(_ entity : Entity, withRemovedComponent removedComponent : Component) {
+        if(entityIdToPosition[entity.creationIndex] != nil && changeType != .addedOnly){
             return
         }
         switch changeType {
-        case .Added : return
-        case .AddedOnly :
-            collectedEntities.removeAtIndex(entityIdToPosition[entity.creationIndex]!)
-            entityIdToPosition.removeValueForKey(entity.creationIndex)
+        case .added : return
+        case .addedOnly :
+            collectedEntities.remove(at: entityIdToPosition[entity.creationIndex]!)
+            entityIdToPosition.removeValue(forKey: entity.creationIndex)
         default :
             collectedEntities.append(entity)
             entityIdToPosition[entity.creationIndex] = collectedEntities.count - 1
@@ -70,15 +70,15 @@ public class Collector: GroupObserver {
     /// By providing an amount you can define how many changed entities you would like to get. Think about it as of a queue of changes.
     /// The amount parameter is introduced in case there are to many changes to process in one go, so you can process those changes sequentially.
     /// By setting amount to '-1' you will get all collected entities.
-    public func pull(amount : Int = -1) -> ArraySlice<Entity> {
+    open func pull(_ amount : Int = -1) -> ArraySlice<Entity> {
         if(amount == 0 || collectedEntities.count == 0){
             return []
         }
         
         if(amount < 0){
             let result = collectedEntities[0..<collectedEntities.count]
-            collectedEntities.removeAll(keepCapacity: false)
-            entityIdToPosition.removeAll(keepCapacity: false)
+            collectedEntities.removeAll(keepingCapacity: false)
+            entityIdToPosition.removeAll(keepingCapacity: false)
             return result
         }
         
@@ -87,7 +87,7 @@ public class Collector: GroupObserver {
         let result = collectedEntities[0..<bound]
         
         for entity in result {
-            entityIdToPosition.removeValueForKey(entity.creationIndex)
+            entityIdToPosition.removeValue(forKey: entity.creationIndex)
         }
         
         collectedEntities[0..<bound] = []
@@ -95,7 +95,7 @@ public class Collector: GroupObserver {
         return result
     }
     
-    public func pullFirst() -> Entity? {
+    open func pullFirst() -> Entity? {
         return pull(1).first
     }
 }

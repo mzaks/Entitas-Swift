@@ -18,23 +18,23 @@ public protocol Component {}
 /// Protocol extension which returns component id.
 extension Component {
     public static var cId : ComponentId { return ObjectIdentifier(self)}
-    public var cId : ComponentId { return ObjectIdentifier(self.dynamicType)}
+    public var cId : ComponentId { return ObjectIdentifier(type(of: self))}
 }
 
 /// Protocol extension which returns matcher for given component.
 extension Component {
-    public static var matcher : Matcher { return Matcher.All(cId)}
+    public static var matcher : Matcher { return Matcher.all(cId)}
 }
 
 /// A protocol which should be implemented by a class monitoring entity changes.
 protocol EntityChangedListener : class {
-    func componentAdded(entity: Entity, component: Component)
-    func componentRemoved(entity: Entity, component: Component)
+    func componentAdded(_ entity: Entity, component: Component)
+    func componentRemoved(_ entity: Entity, component: Component)
 }
 
 
 public func == (lhs: Entity, rhs: Entity) -> Bool {
-    return lhs.creationIndex == rhs.creationIndex && lhs.mainListener === rhs.mainListener && lhs.dynamicType === rhs.dynamicType
+    return lhs.creationIndex == rhs.creationIndex && lhs.mainListener === rhs.mainListener && type(of: lhs) === type(of: rhs)
 }
 
 /// Entity can be seen as a bag of components.
@@ -42,7 +42,7 @@ public func == (lhs: Entity, rhs: Entity) -> Bool {
 /// For querying a group of entities please have a look at Group class.
 /// You can observe entity changes by implementing EntityChangedListener protocol.
 public final class Entity : Equatable, CustomDebugStringConvertible {
-    private var _components : [ComponentId:Component]
+    fileprivate var _components : [ComponentId:Component]
     let mainListener : EntityChangedListener
     public let creationIndex : Int
     
@@ -56,7 +56,7 @@ public final class Entity : Equatable, CustomDebugStringConvertible {
     /// When the entity already has component of the given type and overwrite parameter was not set to true, "Illegal overwrite error" will be raised.
     /// This precaution is defined, because it proved to help find bugs during development.
     /// When you overwrite a component, the old component will be first removed from the entity and than the new component will be added. This mechanism ensures that observers get full picture. This is also why component should be immutable.
-    public func set(c:Component, overwrite:Bool = false) -> Entity {
+    @discardableResult public func set(_ c:Component, overwrite:Bool = false) -> Entity {
         let componentId = c.cId
         let contains = _components[componentId] != nil
         
@@ -74,7 +74,7 @@ public final class Entity : Equatable, CustomDebugStringConvertible {
     }
     
     /// Returns an optional value for component type.
-    public func get<C:Component>(ct:C.Type) -> C? {
+    public func get<C:Component>(_ ct:C.Type) -> C? {
         let componentName = ct.cId
         if let c = _components[componentName] {
             return c as? C
@@ -83,31 +83,30 @@ public final class Entity : Equatable, CustomDebugStringConvertible {
     }
 
     /// Checks if entity already has a component of following component type.
-    public func has<C:Component>(ct:C.Type) -> Bool {
+    public func has<C:Component>(_ ct:C.Type) -> Bool {
         return hasComponent(ct.cId)
     }
     
-    func hasComponent(cId:ComponentId) -> Bool {
+    func hasComponent(_ cId:ComponentId) -> Bool {
         return _components[cId] != nil
     }
     
     /// Removes a component from the entity. If the entity doesn't have a component of this type, nothing happens.
-    public func remove<C:Component>(ct:C.Type) {
+    public func remove<C:Component>(_ ct:C.Type) {
         removeComponent(ct.cId)
     }
     
-    func removeComponent(componentId:ComponentId) {
-        if _components.indexForKey(componentId) == nil {
+    func removeComponent(_ componentId:ComponentId) {
+        if _components.index(forKey: componentId) == nil {
             return
         }
         
-        if let component = _components.removeValueForKey(componentId) {
+        if let component = _components.removeValue(forKey: componentId) {
             mainListener.componentRemoved(self, component: component)
         }
     }
 
     func removeAllComponents(){
-        //_components.removeAll(keepCapacity: false)
         for (id, _) in _components {
             removeComponent(id)
         }
@@ -138,11 +137,11 @@ public final class Entity : Equatable, CustomDebugStringConvertible {
 
 /// Detached entity is meant to be used in multithreading scenario. Please have a look at detach method on Enitty class.
 public struct DetachedEntity {
-    private let entity : Entity
-    private var components : [ComponentId:Component]
-    private var changedComponents : [ComponentId:Bool] = [:]
+    fileprivate let entity : Entity
+    fileprivate var components : [ComponentId:Component]
+    fileprivate var changedComponents : [ComponentId:Bool] = [:]
     
-    public mutating func set(c:Component, overwrite:Bool = false) {
+    public mutating func set(_ c:Component, overwrite:Bool = false) {
         let componentId = c.cId
         
         if components[componentId] != nil && !overwrite {
@@ -153,44 +152,43 @@ public struct DetachedEntity {
         changedComponents[componentId] = true
     }
     
-    public func get<C:Component>(ct:C.Type) -> C? {
+    public func get<C:Component>(_ ct:C.Type) -> C? {
         if let c = components[ct.cId] {
             return c as? C
         }
         return nil
     }
     
-    public func has<C:Component>(ct:C.Type) -> Bool {
+    public func has<C:Component>(_ ct:C.Type) -> Bool {
         return components[ct.cId] != nil
     }
     
-    public mutating func remove<C:Component>(ct:C.Type) {
+    public mutating func remove<C:Component>(_ ct:C.Type) {
         let componentId : ComponentId = ct.cId
-        if components.indexForKey(componentId) == nil {
+        if components.index(forKey: componentId) == nil {
             return
         }
         
-        components.removeValueForKey(componentId)
+        components.removeValue(forKey: componentId)
         changedComponents[componentId] = true
     }
     
     /// Sync will go through all changed components and set or remove components from the managed entity instance accordingly to the changes.
-    /// As detached entity was meant to be used in multithreading scenario, the syncing is done asynchronously on a special queue. You can specify the queue and dispatch a function as you wish. Defaults are main queue and 'dispatch_async' function.
+    /// As detached entity was meant to be used in multithreading scenario, the syncing is done asynchronously on a special queue. You can specify the queue as you wish. Default is main queue.
     public mutating func sync(
-                    onQueue queue : dispatch_queue_t = dispatch_get_main_queue(),
-                    dispatchFunction : (dispatch_queue_t, dispatch_block_t) -> () = dispatch_async) {
+                    onQueue queue : DispatchQueue = DispatchQueue.main) {
         let localComponets = components
         let keys = changedComponents.keys
         let localEntity = entity
-        dispatchFunction(queue) {
+        queue.async {
             for key in keys {
                 if let component = localComponets[key] {
-                    localEntity.set(component, overwrite:true)
+                    _ = localEntity.set(component, overwrite:true)
                 } else {
                     localEntity.removeComponent(key)
                 }
             }
         }
-        changedComponents.removeAll(keepCapacity: false)
+        changedComponents.removeAll(keepingCapacity: false)
     }
 }

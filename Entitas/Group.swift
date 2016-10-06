@@ -8,26 +8,26 @@
 
 /// A protocol which lets you monitor a group for changes
 public protocol GroupObserver : class {
-    func entityAdded(entity : Entity)
-    func entityRemoved(entity : Entity, withRemovedComponent removedComponent : Component)
+    func entityAdded(_ entity : Entity)
+    func entityRemoved(_ entity : Entity, withRemovedComponent removedComponent : Component)
 }
 
 /// A group contains all entities which apply to a certain matcher.
 /// Groups are created through Context.entityGroup method.
 /// Groups are always up to date.
 /// Groups are internally cached in Context class, so you don't have to be concerned about caching them your self, just call Context.entityGroup method when you need it.
-public class Group {
+open class Group {
     
-    public let matcher : Matcher
-    private var _entities : [Int:Entity] = [:]
-    private var _sortedEntities : [Entity]?
-    private var _observers : [GroupObserver] = []
+    open let matcher : Matcher
+    fileprivate var _entities : [Int:Entity] = [:]
+    fileprivate var _sortedEntities : [Entity]?
+    fileprivate var _observers : [GroupObserver] = []
     
     init(matcher : Matcher){
         self.matcher = matcher
     }
     
-    func addEntity(e : Entity) {
+    func addEntity(_ e : Entity) {
         if let _ = _entities[e.creationIndex] {
             return;
         }
@@ -38,8 +38,8 @@ public class Group {
         }
     }
     
-    func removeEntity(e : Entity, withRemovedComponent removedComponent : Component) {
-        guard let _ = _entities.removeValueForKey(e.creationIndex) else {
+    func removeEntity(_ e : Entity, withRemovedComponent removedComponent : Component) {
+        guard let _ = _entities.removeValue(forKey: e.creationIndex) else {
             return
         }
         _sortedEntities = nil
@@ -48,20 +48,20 @@ public class Group {
         }
     }
 
-    public var count : Int{
+    open var count : Int{
         get {
             return _entities.count
         }
     }
     
     /// Returns an array of entities sorted by entity creation index
-    public var sortedEntities: [Entity] {
+    open var sortedEntities: [Entity] {
         get {
             if let sortedEntities = _sortedEntities {
                 return sortedEntities
             }
             
-            let sortedKeys = _entities.keys.sort(<)
+            let sortedKeys = _entities.keys.sorted(by: <)
             var sortedEntities : [Entity] = []
             for key in sortedKeys {
                 sortedEntities.append(_entities[key]!)
@@ -72,17 +72,17 @@ public class Group {
     }
     
     /// Returns unsorted array of entities, the order is non deterministic
-    public var unsortedEntities : [Entity] {
+    open var unsortedEntities : [Entity] {
         return _entities.values.lazy.map({$0})
     }
     
-    public func addObserver(observer : GroupObserver) {
+    open func addObserver(_ observer : GroupObserver) {
         _observers.append(observer)
     }
     
-    public func removeObserver(observer : GroupObserver) {
+    open func removeObserver(_ observer : GroupObserver) {
         var index : Int? = nil
-        for (_index, _observer) in _observers.enumerate() {
+        for (_index, _observer) in _observers.enumerated() {
             if _observer === observer {
                 index = _index
                 break
@@ -90,24 +90,24 @@ public class Group {
         }
         
         if let observerIndex = index {
-            _observers.removeAtIndex(observerIndex)
+            _observers.remove(at: observerIndex)
         }
     }
     
-    public func removeAllListeners() {
-        _observers.removeAll(keepCapacity: false)
+    open func removeAllListeners() {
+        _observers.removeAll(keepingCapacity: false)
     }
 }
 
 
-extension Group : SequenceType {
+extension Group : Sequence {
     
-    public func generate() -> AnyGenerator<Entity> {
+    public func makeIterator() -> AnyIterator<Entity> {
         let values = Array<Entity>(_entities.values)
         
         var nextIndex = 0
         
-        return AnyGenerator<Entity> {
+        return AnyIterator<Entity> {
             if(values.count <= nextIndex){
                 return nil
             }
