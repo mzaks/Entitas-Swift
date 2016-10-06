@@ -13,14 +13,15 @@ public class DebugContext : Context {
     
     let creationTime : CFAbsoluteTime
     var entityCreationTimeDeltas : [Int:CFAbsoluteTime] = [:]
-    /// Function used to protocol entity and group changes.
     public var printFunction : (String) -> ()
+    let ignore : Set<ComponentId>
     
-    /// Init method with default value for print function.
-    /// It also saves the creation time for delta time calculations.
-    public init(printFunction : (String) -> () = println){
+    private var stateChange = false
+    
+    public init(printFunction : (String) -> (), ignore: Set<ComponentId> = []){
         creationTime = CFAbsoluteTimeGetCurrent()
         self.printFunction = printFunction
+        self.ignore = ignore
         super.init()
     }
     
@@ -28,45 +29,65 @@ public class DebugContext : Context {
         let e = super.createEntity()
         entityCreationTimeDeltas[e.creationIndex] = deltaTime
         printFunction("Entity: \(e.creationIndex) created. (\(entityCreationTimeDeltas[e.creationIndex]!))")
+        stateChange = true
         return e
     }
     
     public override func destroyEntity(entity : Entity) {
         super.destroyEntity(entity)
-        let currentTime = CFAbsoluteTimeGetCurrent()
         printFunction("Entity: \(entity.creationIndex) destroyed. Age: (\(entityAge(entity)) (\(deltaTime))")
+        stateChange = true
     }
     
-    public override func entityGroup(matcher : Matcher) -> Group {
-        let group = super.entityGroup(matcher)
-        printFunction("Group: \(matcher.matcherKey) requested. (\(numberOfGroups)) (\(deltaTime))")
-        return group
+//    public override func entityGroup(matcher : Matcher) -> Group {
+//        let group = super.entityGroup(matcher)
+//        printFunction("Group: \(matcher.matcherKey) requested. (\(numberOfGroups)) (\(deltaTime))")
+//        return group
+//    }
+    
+    override func registerSystem(name :String, system : System) -> System {
+        return { [self]
+            if self.stateChange {
+                self.printFunction("-------- Changes were applied outside system loop")
+                self.stateChange = false
+            }
+            let time = CFAbsoluteTimeGetCurrent()
+            system()
+            if self.stateChange {
+                self.printFunction("-------- did execute \(name) : in \((CFAbsoluteTimeGetCurrent() - time)*1000)")
+                self.stateChange = false
+            }
+        }
     }
     
     override func componentAdded(entity: Entity, component: Component) {
         super.componentAdded(entity, component: component)
         
-        let componentId = cId(component)
-        
-        if let _component : DebugPrintable = component as? DebugPrintable {
-            printFunction("Entity: \(entity.creationIndex) added Component: \(componentId) \(_component.debugDescription). (\(deltaTime))")
-        } else {
-            printFunction("Entity: \(entity.creationIndex) added Component: \(componentId). (\(component)) (\(deltaTime))")
+        guard !ignore.contains(component.cId) else {
+            return
         }
         
+        if let _component : CustomDebugStringConvertible = component as? CustomDebugStringConvertible {
+            printFunction("Entity: \(entity.creationIndex) added Component: \(_component.debugDescription). (\(deltaTime))")
+        } else {
+            printFunction("Entity: \(entity.creationIndex) added Component: (\(component)) (\(deltaTime))")
+        }
+        stateChange = true
     }
     
     override func componentRemoved(entity: Entity, component: Component) {
         super.componentRemoved(entity, component: component)
         
-        let componentId = cId(component)
-        
-        if let _component : DebugPrintable = component as? DebugPrintable {
-            printFunction("Entity: \(entity.creationIndex) removed Component: \(componentId) \(_component.debugDescription). (\(deltaTime))")
-        } else {
-            printFunction("Entity: \(entity.creationIndex) removed Component: \(componentId). (\(component)) (\(deltaTime))")
+        guard !ignore.contains(component.cId) else {
+            return
         }
         
+        if let _component : CustomDebugStringConvertible = component as? CustomDebugStringConvertible {
+            printFunction("Entity: \(entity.creationIndex) removed Component: \(_component.debugDescription). (\(deltaTime))")
+        } else {
+            printFunction("Entity: \(entity.creationIndex) removed Component: (\(component)) (\(deltaTime))")
+        }
+        stateChange = true
     }
     
     var deltaTime : CFAbsoluteTime

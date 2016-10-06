@@ -6,7 +6,6 @@
 //  Copyright (c) 2015 Maxim Zaks. All rights reserved.
 //
 
-
 /// Collector is a group observer which gathers all entities which were added or removed (according to GroupChangeType you provide) to the observed group.
 /// It helps you to collect changes over time and react on all changes at your convenience.
 public class Collector: GroupObserver {
@@ -72,7 +71,7 @@ public class Collector: GroupObserver {
     /// The amount parameter is introduced in case there are to many changes to process in one go, so you can process those changes sequentially.
     /// By setting amount to '-1' you will get all collected entities.
     public func pull(amount : Int = -1) -> ArraySlice<Entity> {
-        if(amount == 0){
+        if(amount == 0 || collectedEntities.count == 0){
             return []
         }
         
@@ -94,5 +93,9 @@ public class Collector: GroupObserver {
         collectedEntities[0..<bound] = []
         
         return result
+    }
+    
+    public func pullFirst() -> Entity? {
+        return pull(1).first
     }
 }

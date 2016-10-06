@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 Maxim Zaks. All rights reserved.
 //
 
-
 /// A protocol which lets you monitor a group for changes
 public protocol GroupObserver : class {
     func entityAdded(entity : Entity)
@@ -19,43 +18,39 @@ public protocol GroupObserver : class {
 /// Groups are internally cached in Context class, so you don't have to be concerned about caching them your self, just call Context.entityGroup method when you need it.
 public class Group {
     
-    /// The matcher witch decides if entity belongs to the group.
     public let matcher : Matcher
-    private var entities : [Int:Entity] = [:]
-    private var observers : [GroupObserver] = []
+    private var _entities : [Int:Entity] = [:]
     private var _sortedEntities : [Entity]?
+    private var _observers : [GroupObserver] = []
     
     init(matcher : Matcher){
         self.matcher = matcher
     }
     
     func addEntity(e : Entity) {
-        if let entity = entities[e.creationIndex] {
+        if let _ = _entities[e.creationIndex] {
             return;
         }
-        entities[e.creationIndex] = e
+        _entities[e.creationIndex] = e
         _sortedEntities = nil
-        for listener in observers {
+        for listener in _observers {
             listener.entityAdded(e)
         }
     }
     
     func removeEntity(e : Entity, withRemovedComponent removedComponent : Component) {
-        let prevValue = entities.removeValueForKey(e.creationIndex)
-        if prevValue == nil {
+        guard let _ = _entities.removeValueForKey(e.creationIndex) else {
             return
         }
-        
         _sortedEntities = nil
-        for listener in observers {
+        for listener in _observers {
             listener.entityRemoved(e, withRemovedComponent: removedComponent)
         }
     }
 
-    /// Returns how many entities are in the group
     public var count : Int{
         get {
-            return entities.count
+            return _entities.count
         }
     }
     
@@ -66,45 +61,65 @@ public class Group {
                 return sortedEntities
             }
             
-            let sortedKeys = entities.keys.array.sorted(<)
+            let sortedKeys = _entities.keys.sort(<)
             var sortedEntities : [Entity] = []
             for key in sortedKeys {
-                sortedEntities.append(entities[key]!)
+                sortedEntities.append(_entities[key]!)
             }
             _sortedEntities = sortedEntities
             return _sortedEntities!
         }
     }
     
-    /// Add observer to the group so that you get notified when entity is added or removed from the group.
-    /// This happens when relevant components are set or removed from the entity.
-    public func addObserver(observer : GroupObserver) {
-        // TODO: better implemented with Set, however think about Hashable
-        for _observer in observers {
-            if _observer === observer {
-                return
-            }
-        }
-        observers.append(observer)
+    /// Returns unsorted array of entities, the order is non deterministic
+    public var unsortedEntities : [Entity] {
+        return _entities.values.lazy.map({$0})
     }
     
-    /// Remove observer from the group. Call it when you don't want to be notified any more. Specially if you want to destroy observer object.
+    public func addObserver(observer : GroupObserver) {
+        _observers.append(observer)
+    }
+    
     public func removeObserver(observer : GroupObserver) {
-        // TODO: better implemented with Set (iOS 8.3)
-        observers = observers.filter({$0 !== observer})
+        var index : Int? = nil
+        for (_index, _observer) in _observers.enumerate() {
+            if _observer === observer {
+                index = _index
+                break
+            }
+        }
+        
+        if let observerIndex = index {
+            _observers.removeAtIndex(observerIndex)
+        }
+    }
+    
+    public func removeAllListeners() {
+        _observers.removeAll(keepCapacity: false)
     }
 }
 
-/// Makes a group compatible with 'for in' statement and other iteration functions
+
 extension Group : SequenceType {
-    public func generate() -> GeneratorOf<Entity> {
-        return SequenceOf(entities.values).generate()
+    
+    public func generate() -> AnyGenerator<Entity> {
+        let values = Array<Entity>(_entities.values)
+        
+        var nextIndex = 0
+        
+        return AnyGenerator<Entity> {
+            if(values.count <= nextIndex){
+                return nil
+            }
+            let value = values[nextIndex]
+            nextIndex += 1
+            return value
+        }
     }
     
-    /// Convenience method for filtering entities from the group during iteration
-    public func without(matcher : Matcher) -> SequenceOf<Entity> {
-        return SequenceOf(entities.values.filter{
-            matcher.isMatching($0)
-        })
-    }
+//    public func without(matcher : Matcher) -> AnySequence<Entity> {
+//        return AnySequence(_entities.values.filter{
+//            matcher.isMatching($0)
+//        })
+//    }
 }

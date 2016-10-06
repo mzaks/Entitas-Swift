@@ -6,48 +6,51 @@
 //  Copyright (c) 2014 Maxim Zaks. All rights reserved.
 //
 
+typealias System = ()->()
+
 /// Context is the central piece of Entitas framework.
 /// It manages the entities and groups of entities, keeping every thing up to date.
-public class Context : _EntityChangedListener {
+public class Context : EntityChangedListener, CustomDebugStringConvertible {
     
-    private var entities : Set<Entity> = []
-    private var entityCreationIndex = 0
-    private var groupLookupByMatcher : [Matcher:Group] = [:]
-    private var groupsLookupByAnyId : [ComponentId:[Group]] = [:]
-    private var groupsLookupByAllId : [ComponentId:[Group]] = [:]
+    private var _entities : [Int:Entity] = [:]
+    private var _entityCreationIndex = 0
+    private var _groupLookupByMatcher : [Matcher:Group] = [:]
+    private var _groupsLookupByAnyId : [ComponentId:[Group]] = [:]
+    private var _groupsLookupByAllId : [ComponentId:[Group]] = [:]
     
     /// Simple and empty init method.
     public init(){}
     
-        /// Hard resets of context.
-        /// Deletes all references to entities and groups.
-        /// Sets entity creation index back to 0.
-        /// Currently no observer will be notified about the reset.
+    /// Hard resets of context.
+    /// Deletes all references to entities and groups.
+    /// Sets entity creation index back to 0.
+    /// Currently no observer will be notified about the reset.
     public func reset(){
-        entities.removeAll(keepCapacity: false)
-        entityCreationIndex = 0
-        groupLookupByMatcher.removeAll(keepCapacity: false)
-        groupsLookupByAnyId.removeAll(keepCapacity: false)
-        groupsLookupByAllId.removeAll(keepCapacity: false)
+        _entities.removeAll(keepCapacity: false)
+        _entityCreationIndex = 0
+        _groupLookupByMatcher.removeAll(keepCapacity: false)
+        _groupsLookupByAnyId.removeAll(keepCapacity: false)
+        _groupsLookupByAllId.removeAll(keepCapacity: false)
     }
     
-        /// The only way for creation of an entity.
-        /// This way the entity is managed by the context and gets it creation index.
-        /// The entity will communicate every change to the managing context.
+    /// The only way for creation of an entity.
+    /// This way the entity is managed by the context and gets it creation index.
+    /// The entity will communicate every change to the managing context.
     public func createEntity() -> Entity {
-        let e = Entity(listener: self, creationIndex: entityCreationIndex++)
-        entities.insert(e)
+        let e = Entity(listener: self, creationIndex: _entityCreationIndex)
+        _entities[e.creationIndex] = e
+        _entityCreationIndex += 1
         return e
     }
     
     /// The only way to get a group. The groups are cached so if you will call this method with the same matcher multiple times you will get the same instance of the group.
     public func entityGroup(matcher : Matcher) -> Group {
-        if let group = groupLookupByMatcher[matcher] {
+        if let group = _groupLookupByMatcher[matcher] {
             return group
         }
         
         let group = Group(matcher: matcher)
-        groupLookupByMatcher[matcher] = group;
+        _groupLookupByMatcher[matcher] = group;
         fillGroupWithEntities(group)
         
         switch group.matcher.type{
@@ -62,20 +65,18 @@ public class Context : _EntityChangedListener {
     /// It will inform observers that it was destroyed.
     /// Be caution about destroying entities. Most of the time flagging an entity with a component can do the job and is more appropriate according to data consistency.
     public func destroyEntity(entity : Entity) {
-        entity.destroy()
-        entities.remove(entity)
+        _entities.removeValueForKey(entity.creationIndex)
+        entity.removeAllComponents()
     }
     
-    /// Destroy all entities for example if you want to have a soft reload.
-    /// Groups are not destroyed, therefor all observers will be notified.
-    public func destroyAllEntities() {
-        for e in entities {
-            destroyEntity(e)
-        }
+    /// Register system if you want it to appear in debug context
+    func registerSystem(name :String, system : System) -> System {
+        return system
     }
+    
     
     func fillGroupWithEntities(group : Group){
-        for e in entities {
+        for e in _entities.values {
             if group.matcher.isMatching(e){
                 group.addEntity(e)
             }
@@ -85,37 +86,37 @@ public class Context : _EntityChangedListener {
     func addGroupToLoockupByAnyId(group : Group) {
         for cid in group.matcher.componentIds {
             var groups : [Group] = []
-            if let _groups = groupsLookupByAnyId[cid]{
+            if let _groups = _groupsLookupByAnyId[cid]{
                 groups = _groups
             }
             
             groups.append(group)
-            groupsLookupByAnyId[cid] = groups
+            _groupsLookupByAnyId[cid] = groups
         }
     }
     
     func addGroupToLoockupByAllId(group : Group) {
         for cid in group.matcher.componentIds {
             var groups : [Group] = []
-            if let _groups = groupsLookupByAllId[cid]{
+            if let _groups = _groupsLookupByAllId[cid]{
                 groups = _groups
             }
             
             groups.append(group)
-            groupsLookupByAllId[cid] = groups
+            _groupsLookupByAllId[cid] = groups
         }
     }
         
     func componentAdded(entity: Entity, component: Component) {
         
-        let componentId = cId(component)
+        let componentId = component.cId
         
-        if let groups = groupsLookupByAnyId[componentId]{
+        if let groups = _groupsLookupByAnyId[componentId]{
             for group in groups{
                 group.addEntity(entity)
             }
         }
-        if let groups = groupsLookupByAllId[componentId]{
+        if let groups = _groupsLookupByAllId[componentId]{
             for group in groups{
                 if group.matcher.isMatching(entity){
                     group.addEntity(entity)
@@ -126,16 +127,16 @@ public class Context : _EntityChangedListener {
     
     func componentRemoved(entity: Entity, component: Component) {
         
-        let componentId = cId(component)
+        let componentId = component.cId
         
-        if let groups = groupsLookupByAllId[componentId]{
+        if let groups = _groupsLookupByAllId[componentId]{
             for group in groups{
-//                if group.matcher.isMatching(entity){
+                if !group.matcher.isMatching(entity){
                     group.removeEntity(entity, withRemovedComponent: component)
-//                }
+                }
             }
         }
-        if let groups = groupsLookupByAnyId[componentId]{
+        if let groups = _groupsLookupByAnyId[componentId]{
             for group in groups{
                 if !group.matcher.isMatching(entity){
                     group.removeEntity(entity, withRemovedComponent: component)
@@ -145,6 +146,12 @@ public class Context : _EntityChangedListener {
     }
     
     var numberOfGroups:Int{
-        return groupLookupByMatcher.count
+        return _groupLookupByMatcher.count
+    }
+    
+    public var debugDescription: String {
+        let entities = _entities.values.flatMap({$0.debugDescription})
+        
+        return entities.joinWithSeparator("\n")
     }
 }

@@ -96,7 +96,7 @@ class ContextTests: XCTestCase {
         let (g1, g2, g3, g4) = createFourGroups()
         
         // when
-        var (e1, e2, e3) = createThreeEntities()
+        let (e1, e2, e3) = createThreeEntities()
         
         // then
         XCTAssertEqual(g1.sortedEntities, [e1, e3], "entities with name and age")
@@ -107,9 +107,9 @@ class ContextTests: XCTestCase {
     
     func test_should_iterate_on_group(){
         // given
-        var (e1, e2, e3) = createThreeEntities()
+        let (_, _, _) = createThreeEntities()
         
-        let group = context.entityGroup(Matcher.All(NameComponent, AgeComponent))
+        let group = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
         
         // when
         for e in group {
@@ -122,12 +122,14 @@ class ContextTests: XCTestCase {
     
     func test_should_destroy_all_entities_check_all_group_to_be_empty(){
         // given
-        var (e1, e2, e3) = createThreeEntities()
+        let (e1, e2, e3) = createThreeEntities()
         
-        let group = context.entityGroup(Matcher.All(NameComponent, AgeComponent))
+        let group = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
         
         // when
-        context.destroyAllEntities()
+        context.destroyEntity(e1)
+        context.destroyEntity(e2)
+        context.destroyEntity(e3)
         
         // then
         XCTAssertEqual(group.count, 0)
@@ -135,12 +137,14 @@ class ContextTests: XCTestCase {
     
     func test_should_destroy_all_entities_check_any_group_to_be_empty(){
         // given
-        var (e1, e2, e3) = createThreeEntities()
+        let (e1, e2, e3) = createThreeEntities()
         
-        let group = context.entityGroup(Matcher.Any(NameComponent, AgeComponent))
+        let group = context.entityGroup(Matcher.Any(NameComponent.cId, AgeComponent.cId))
         
         // when
-        context.destroyAllEntities()
+        context.destroyEntity(e1)
+        context.destroyEntity(e2)
+        context.destroyEntity(e3)
         
         // then
         XCTAssertEqual(group.count, 0)
@@ -165,39 +169,39 @@ class ContextTests: XCTestCase {
     }
     
     func createFourGroups() -> (g1:Group, g2:Group, g3:Group, g4:Group){
-        let group1 = context.entityGroup(Matcher.All(NameComponent, AgeComponent))
-        let group2 = context.entityGroup(Matcher.All(NameComponent, AgeComponent, PositionComponent))
-        let group3 = context.entityGroup(Matcher.All(AgeComponent))
-        let group4 = context.entityGroup(Matcher.Any(PositionComponent, FlagComponent))
+        let group1 = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
+        let group2 = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId, PositionComponent.cId))
+        let group3 = context.entityGroup(AgeComponent.matcher)
+        let group4 = context.entityGroup(Matcher.Any(PositionComponent.cId, FlagComponent.cId))
         
         return (group1, group2, group3, group4)
     }
     
     func test_shoud_get_same_group() {
         // given
-        let group1 = context.entityGroup(Matcher.All(PositionComponent, NameComponent))
+        let group1 = context.entityGroup(Matcher.All(PositionComponent.cId, NameComponent.cId))
         // when
-        let group2 = context.entityGroup(Matcher.All(NameComponent, PositionComponent))
+        let group2 = context.entityGroup(Matcher.All(NameComponent.cId, PositionComponent.cId))
         // then
         XCTAssertTrue(group1 === group2, "you get the same group")
     }
     
     func test_shoud_get_same_matcher() {
         // given
-        let matcher1 = Matcher.All(PositionComponent, NameComponent)
+        let matcher1 = Matcher.All(PositionComponent.cId, NameComponent.cId)
         // when
-        let matcher2 = Matcher.All(NameComponent, PositionComponent)
+        let matcher2 = Matcher.All(NameComponent.cId, PositionComponent.cId)
         // then
         XCTAssertTrue(matcher1 == matcher2, "you get the same matcher")
     }
     
     func test_should_create_matcher_with_sorted_component_ids() {
         // when
-        let matcher : Matcher = Matcher.All(AgeComponent, NameComponent, FlagComponent)
+        let matcher : Matcher = Matcher.All(AgeComponent.cId, NameComponent.cId, FlagComponent.cId)
         
         // then
         
-        XCTAssertEqual(matcher.componentIds, [cId(AgeComponent), cId(FlagComponent), cId(NameComponent)], "component ids should be sorted")
+        XCTAssertEqual(matcher.componentIds, [AgeComponent.cId, FlagComponent.cId, NameComponent.cId], "component ids should be sorted")
     }
     
     func test_detached_entity_reflects_entities_data(){
@@ -263,7 +267,7 @@ class ContextTests: XCTestCase {
         e.set(FlagComponent())
         let expectation = expectationWithDescription("expect sync");
         
-        let group = context.entityGroup(Matcher.All(NameComponent, PositionComponent, AgeComponent))
+        let group = context.entityGroup(Matcher.All(NameComponent.cId, PositionComponent.cId, AgeComponent.cId))
         group.addObserver(MyObserver(expectation: expectation))
         
         // when
@@ -293,7 +297,7 @@ class ContextTests: XCTestCase {
     func test_collector_pulling(){
         // given
         
-        let group = context.entityGroup(Matcher.All(NameComponent))
+        let group = context.entityGroup(Matcher.All(NameComponent.cId))
         
         let collector = Collector(group: group, changeType: .Added)
         
@@ -312,7 +316,7 @@ class ContextTests: XCTestCase {
     func test_collector_pulling_four_first(){
         // given
         
-        let group = context.entityGroup(Matcher.All(NameComponent))
+        let group = context.entityGroup(Matcher.All(NameComponent.cId))
         
         let collector = Collector(group: group, changeType: .Added)
         
@@ -322,7 +326,7 @@ class ContextTests: XCTestCase {
         }
         
         // when
-        let result = collector.pull(amount: 4)
+        let result = collector.pull(4)
         
         // then
         XCTAssert(result.count == 4, "4 entities were pulled from collector")
@@ -338,7 +342,7 @@ class ContextTests: XCTestCase {
     
     func test_group_observer_trigering_when_removed_entity() {
         // given
-        let group = context.entityGroup(Matcher.All(NameComponent, AgeComponent))
+        let group = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
         
         let e = context.createEntity()
         e.set(NameComponent(name:"Maxim"))
@@ -355,7 +359,7 @@ class ContextTests: XCTestCase {
     
     func test_group_observer_not_trigering_when_removed_entity_is_not_part_of_the_group() {
         // given
-        let group = context.entityGroup(Matcher.All(NameComponent, AgeComponent))
+        let group = context.entityGroup(Matcher.All(NameComponent.cId, AgeComponent.cId))
         let e = context.createEntity()
         e.set(NameComponent(name:"Maxim"))
         let observer = MyObserver(expectation: nil)
@@ -370,12 +374,10 @@ class ContextTests: XCTestCase {
     
     func test_performance_creating_entities_with_random_components() {
         
-        var groups = createFourGroups()
+        let groups = createFourGroups()
         
         self.measureBlock() {
-            
-            
-            for i in 1 ... 1_000 {
+            for _ in 1 ... 1_000 {
                 let e = self.context.createEntity()
                 self.addRandomComponents(e)
             }

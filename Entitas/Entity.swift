@@ -9,54 +9,46 @@
 import Foundation
 
 /// ComponentId identifies the type of a component.
-public typealias ComponentId = String
-
-/// Returns component id for component instance.
-public func cId(c : Component) -> ComponentId {
-    return reflect(c.dynamicType).summary
-}
-
-/// Returns component id for component type.
-public func cId<C:Component>(ct:C.Type) -> ComponentId {
-    return reflect(ct).summary
-}
+public typealias ComponentId = ObjectIdentifier
 
 /// A ghost protocol which identifies a struct as a component.
 /// We suggest to use structs for component representation as component should be immutable value objects.
-public protocol Component {
+public protocol Component {}
+
+/// Protocol extension which returns component id.
+extension Component {
+    public static var cId : ComponentId { return ObjectIdentifier(self)}
+    public var cId : ComponentId { return ObjectIdentifier(self.dynamicType)}
+}
+
+/// Protocol extension which returns matcher for given component.
+extension Component {
+    public static var matcher : Matcher { return Matcher.All(cId)}
 }
 
 /// A protocol which should be implemented by a class monitoring entity changes.
-public protocol EntityChangedListener : class {
+protocol EntityChangedListener : class {
     func componentAdded(entity: Entity, component: Component)
     func componentRemoved(entity: Entity, component: Component)
-    func entityDestroyed()
 }
 
 
-// _EntityChangedListener is introduced to be an internal access protocol which Context implements.
-// We avoid EntityChangedListener as it is public and therefore would pollute Context API.
-protocol _EntityChangedListener : class {
-    func componentAdded(entity: Entity, component: Component)
-    func componentRemoved(entity: Entity, component: Component)
-
+public func == (lhs: Entity, rhs: Entity) -> Bool {
+    return lhs.creationIndex == rhs.creationIndex && lhs.mainListener === rhs.mainListener && lhs.dynamicType === rhs.dynamicType
 }
 
-/// Entity can be seen as a bag of components. 
+/// Entity can be seen as a bag of components.
 /// It is managed by a context and also created by a context instance.
 /// For querying a group of entities please have a look at Group class.
 /// You can observe entity changes by implementing EntityChangedListener protocol.
-public final class Entity {
+public final class Entity : Equatable, CustomDebugStringConvertible {
     private var _components : [ComponentId:Component]
-    private var observers : [EntityChangedListener]
-    unowned let mainListener : _EntityChangedListener
-    /// Constant value which is set when an entity is created by a context.
+    let mainListener : EntityChangedListener
     public let creationIndex : Int
     
-    init(listener : _EntityChangedListener, creationIndex : Int) {
+    init(listener : EntityChangedListener, creationIndex : Int) {
         _components = [:]
         mainListener = listener
-        observers = []
         self.creationIndex = creationIndex
     }
     
@@ -64,27 +56,26 @@ public final class Entity {
     /// When the entity already has component of the given type and overwrite parameter was not set to true, "Illegal overwrite error" will be raised.
     /// This precaution is defined, because it proved to help find bugs during development.
     /// When you overwrite a component, the old component will be first removed from the entity and than the new component will be added. This mechanism ensures that observers get full picture. This is also why component should be immutable.
-    public func set(c:Component, overwrite:Bool = false) {
-        let componentId = cId(c)
+    public func set(c:Component, overwrite:Bool = false) -> Entity {
+        let componentId = c.cId
+        let contains = _components[componentId] != nil
         
-        if _components[componentId] != nil && !overwrite {
+        if contains && !overwrite {
             assertionFailure("Illegal overwrite error")
         }
         
-        if overwrite {
+        if contains {
             self.removeComponent(componentId)
         }
         
         _components[componentId] = c;
         mainListener.componentAdded(self, component:c)
-        for observer in observers {
-            observer.componentAdded(self, component: c)
-        }
+        return self
     }
     
-    /// Returns an option value for component type.
+    /// Returns an optional value for component type.
     public func get<C:Component>(ct:C.Type) -> C? {
-        let componentName = cId(ct)
+        let componentName = ct.cId
         if let c = _components[componentName] {
             return c as? C
         }
@@ -93,7 +84,7 @@ public final class Entity {
 
     /// Checks if entity already has a component of following component type.
     public func has<C:Component>(ct:C.Type) -> Bool {
-        return hasComponent(cId(ct))
+        return hasComponent(ct.cId)
     }
     
     func hasComponent(cId:ComponentId) -> Bool {
@@ -102,7 +93,7 @@ public final class Entity {
     
     /// Removes a component from the entity. If the entity doesn't have a component of this type, nothing happens.
     public func remove<C:Component>(ct:C.Type) {
-        removeComponent(cId(ct))
+        removeComponent(ct.cId)
     }
     
     func removeComponent(componentId:ComponentId) {
@@ -112,17 +103,26 @@ public final class Entity {
         
         if let component = _components.removeValueForKey(componentId) {
             mainListener.componentRemoved(self, component: component)
-            for observer in observers {
-                observer.componentRemoved(self, component: component)
-            }
+        }
+    }
+
+    func removeAllComponents(){
+        //_components.removeAll(keepCapacity: false)
+        for (id, _) in _components {
+            removeComponent(id)
         }
     }
     
-    /// Lets you iterate through all components in the entity.
-    public var components : SequenceOf<Component> {
+    public var components : [ComponentId:Component] {
         get {
-            return SequenceOf(_components.values)
+            return _components
         }
+    }
+    
+    public var debugDescription: String {
+        let components = _components.values.flatMap({$0})
+        let contextId = ObjectIdentifier(mainListener).hashValue
+        return "Entity(\(creationIndex))@\(contextId): \(components)"
     }
 
     /// Detach creates a DetachedEntity struct which can be changed without informing the managing context about the changes.
@@ -131,63 +131,19 @@ public final class Entity {
     /// As DetachEntity is a struct, every call of this getter will create a new instance. It is up to you to make sure that you don't have concurrent detached entities.
     public var detach : DetachedEntity {
         get {
-            return DetachedEntity(entity: self, components: _components, changedComponents: [:])
+            return DetachedEntity(entity: self, components: components, changedComponents: [:])
         }
-    }
-    
-    func destroy() {
-        for component in components {
-            _components.removeValueForKey(cId(component))
-            mainListener.componentRemoved(self, component: component)
-        }
-        for observer in observers {
-            observer.entityDestroyed()
-        }
-        observers.removeAll(keepCapacity: false)
-    }
-    
-    /// Adding observer to entity. Observer will get notified when a component is added or removed. On overwrite observer will get removed and than directly added notification. Observer is also notified when an entity is destroyed.
-    public func addObserver(observer : EntityChangedListener) {
-        // TODO: better implemented with Set, however think about Hashable
-        for _observer in observers {
-            if _observer === observer {
-                return
-            }
-        }
-        observers.append(observer)
-    }
-    
-    /// Removing observer. Call it when you don't want to be notified any more. Specially if you want to destroy observer object.
-    public func removeObserver(observer : EntityChangedListener) {
-        // TODO: better implemented with Set, however think about Hashable
-        observers = observers.filter({$0 !== observer})
-    }
-    
-}
-
-/// The hash of the entity has to be combined by the main listener(managing context) and the creation index.
-extension Entity : Hashable {
-    public var hashValue: Int {
-        let ptr: COpaquePointer = Unmanaged<AnyObject>.passUnretained(mainListener).toOpaque()
-        return ptr.hashValue + creationIndex
     }
 }
-
-/// Equality function for entity class. An entity is equal if it is managed by the same context and has equal creation index.
-public func == (lhs: Entity, rhs: Entity) -> Bool {
-    return lhs.creationIndex == rhs.creationIndex && lhs.mainListener === rhs.mainListener
-}
-
 
 /// Detached entity is meant to be used in multithreading scenario. Please have a look at detach method on Enitty class.
 public struct DetachedEntity {
-    weak private var entity : Entity?
+    private let entity : Entity
     private var components : [ComponentId:Component]
     private var changedComponents : [ComponentId:Bool] = [:]
     
-    /// Works as Entity.set method, without notifying any observer (context included).
     public mutating func set(c:Component, overwrite:Bool = false) {
-        let componentId = cId(c)
+        let componentId = c.cId
         
         if components[componentId] != nil && !overwrite {
             assertionFailure("Illegal overwrite error")
@@ -197,22 +153,19 @@ public struct DetachedEntity {
         changedComponents[componentId] = true
     }
     
-    /// Works as Entity.get method.
     public func get<C:Component>(ct:C.Type) -> C? {
-        if let c = components[cId(ct)] {
+        if let c = components[ct.cId] {
             return c as? C
         }
         return nil
     }
     
-    /// Works as Entity.get method.
     public func has<C:Component>(ct:C.Type) -> Bool {
-        return components[cId(ct)] != nil
+        return components[ct.cId] != nil
     }
     
-    /// Works as Entity.remove method.
     public mutating func remove<C:Component>(ct:C.Type) {
-        let componentId : ComponentId = cId(ct)
+        let componentId : ComponentId = ct.cId
         if components.indexForKey(componentId) == nil {
             return
         }
@@ -232,9 +185,9 @@ public struct DetachedEntity {
         dispatchFunction(queue) {
             for key in keys {
                 if let component = localComponets[key] {
-                    localEntity?.set(component, overwrite:true)
+                    localEntity.set(component, overwrite:true)
                 } else {
-                    localEntity?.removeComponent(key)
+                    localEntity.removeComponent(key)
                 }
             }
         }
