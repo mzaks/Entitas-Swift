@@ -1,3 +1,11 @@
+# 🔴 This Repository is deprecated!!!
+
+New version can be found here:
+https://github.com/mzaks/EntitasKit
+
+---
+
+
 # Entitas
 Entity System Lib implemented in Swift
 
